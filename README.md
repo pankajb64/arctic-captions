@@ -1,5 +1,9 @@
 # arctic-captions
 
+This code has been converted to Python 3 to run on WinPython. Also, flickr30.py has been changed to load features from HDF5 files - taken from (https://github.com/elliottd/satyrid)
+
+To run the IPython notebook, download datasets and pre-trained models from https://github.com/elliottd/satyrid#data--pre-trained-model and place it in arctic_captions/model/flickr30k directory.
+
 Source code for [Show, Attend and Tell: Neural Image Caption Generation with Visual Attention](http://arxiv.org/abs/1502.03044)
 runnable on GPU and CPU.
 

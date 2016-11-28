@@ -42,7 +42,7 @@ class HomogeneousData():
             self.len_indices[ll] = numpy.random.permutation(self.len_indices[ll])
         self.len_idx = -1
 
-    def next(self):
+    def __next__(self):
         # randomly choose the length
         count = 0
         while True:

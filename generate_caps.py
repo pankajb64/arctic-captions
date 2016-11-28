@@ -5,7 +5,7 @@ Works on CPU with support for multi-process
 """
 import argparse
 import numpy
-import cPickle as pkl
+import pickle as pkl
 
 from capgen import build_sampler, gen_sample, \
                    load_params, \
@@ -52,7 +52,7 @@ def gen_model(queue, rqueue, pid, model, options, k, normalize, word_idict, samp
             break
 
         idx, context = req[0], req[1]
-        print pid, '-', idx
+        print(pid, '-', idx)
         seq = _gencap(context)
         rqueue.put((idx, seq))
 
@@ -72,7 +72,7 @@ def main(model, saveto, k=5, normalize=False, zero_pad=False, n_process=5, datas
 
     # <eos> means end of sequence (aka periods), UNK means unknown
     word_idict = dict()
-    for kk, vv in worddict.iteritems():
+    for kk, vv in worddict.items():
         word_idict[vv] = kk
     word_idict[0] = '<eos>'
     word_idict[1] = 'UNK'
@@ -81,7 +81,7 @@ def main(model, saveto, k=5, normalize=False, zero_pad=False, n_process=5, datas
     queue = Queue()
     rqueue = Queue()
     processes = [None] * n_process
-    for midx in xrange(n_process):
+    for midx in range(n_process):
         processes[midx] = Process(target=gen_model, 
                                   args=(queue,rqueue,midx,model,options,k,normalize,word_idict, sampling))
         processes[midx].start()
@@ -112,11 +112,11 @@ def main(model, saveto, k=5, normalize=False, zero_pad=False, n_process=5, datas
     # retrieve caption from process
     def _retrieve_jobs(n_samples):
         caps = [None] * n_samples
-        for idx in xrange(n_samples):
+        for idx in range(n_samples):
             resp = rqueue.get()
             caps[resp[0]] = resp[1]
             if numpy.mod(idx, 10) == 0:
-                print 'Sample ', (idx+1), '/', n_samples, ' Done'
+                print('Sample ', (idx+1), '/', n_samples, ' Done')
         return caps
 
     ds = datasets.strip().split(',')
@@ -124,21 +124,21 @@ def main(model, saveto, k=5, normalize=False, zero_pad=False, n_process=5, datas
     # send all the features for the various datasets
     for dd in ds:
         if dd == 'dev':
-            print 'Development Set...',
+            print('Development Set...', end=' ')
             _send_jobs(valid[1])
             caps = _seqs2words(_retrieve_jobs(len(valid[1])))
             with open(saveto+'.dev.txt', 'w') as f:
-                print >>f, '\n'.join(caps)
-            print 'Done'
+                print('\n'.join(caps), file=f)
+            print('Done')
         if dd == 'test':
-            print 'Test Set...',
+            print('Test Set...', end=' ')
             _send_jobs(test[1])
             caps = _seqs2words(_retrieve_jobs(len(test[1])))
             with open(saveto+'.test.txt', 'w') as f:
-                print >>f, '\n'.join(caps)
-            print 'Done'
+                print('\n'.join(caps), file=f)
+            print('Done')
     # end processes
-    for midx in xrange(n_process):
+    for midx in range(n_process):
         queue.put(None)
 
 

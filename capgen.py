@@ -13,7 +13,7 @@ import theano
 import theano.tensor as tensor
 from theano.sandbox.rng_mrg import MRG_RandomStreams as RandomStreams
 
-import cPickle as pkl
+import six.moves.cPickle as pkl
 import numpy
 import copy
 import os
@@ -55,19 +55,19 @@ dictionary
 
 # push parameters to Theano shared variables
 def zipp(params, tparams):
-    for kk, vv in params.iteritems():
+    for kk, vv in params.items():
         tparams[kk].set_value(vv)
 
 # pull parameters from Theano shared variables
 def unzip(zipped):
     new_params = OrderedDict()
-    for kk, vv in zipped.iteritems():
+    for kk, vv in zipped.items():
         new_params[kk] = vv.get_value()
     return new_params
 
 # get the list of parameters: Note that tparams must be OrderedDict
 def itemlist(tparams):
-    return [vv for kk, vv in tparams.iteritems()]
+    return [vv for kk, vv in tparams.items()]
 
 # dropout in theano
 def dropout_layer(state_before, use_noise, trng):
@@ -91,14 +91,14 @@ def _p(pp, name):
 # initialize Theano shared variables according to the initial parameters
 def init_tparams(params):
     tparams = OrderedDict()
-    for kk, pp in params.iteritems():
+    for kk, pp in params.items():
         tparams[kk] = theano.shared(params[kk], name=kk)
     return tparams
 
 # load parameters
 def load_params(path, params):
     pp = numpy.load(path)
-    for kk, vv in params.iteritems():
+    for kk, vv in params.items():
         if kk not in pp:
             raise Warning('%s is not in the archive' % kk)
         params[kk] = pp[kk]
@@ -301,7 +301,7 @@ def param_init_lstm_cond(options, params, prefix='lstm_cond', nin=None, dim=None
 
     # optional "deep" attention
     if options['n_layers_att'] > 1:
-        for lidx in xrange(1, options['n_layers_att']):
+        for lidx in range(1, options['n_layers_att']):
             params[_p(prefix,'W_att_%d'%lidx)] = ortho_weight(dimctx)
             params[_p(prefix,'b_att_%d'%lidx)] = numpy.zeros((dimctx,)).astype('float32')
 
@@ -355,7 +355,7 @@ def lstm_cond_layer(tparams, state_below, options, prefix='lstm',
     # projected context
     pctx_ = tensor.dot(context, tparams[_p(prefix,'Wc_att')]) + tparams[_p(prefix, 'b_att')]
     if options['n_layers_att'] > 1:
-        for lidx in xrange(1, options['n_layers_att']):
+        for lidx in range(1, options['n_layers_att']):
             pctx_ = tensor.dot(pctx_, tparams[_p(prefix,'W_att_%d'%lidx)])+tparams[_p(prefix, 'b_att_%d'%lidx)]
             # note to self: this used to be options['n_layers_att'] - 1, so no extra non-linearity if n_layers_att < 3
             if lidx < options['n_layers_att']:
@@ -530,7 +530,7 @@ def init_params(options):
                                       nin=options['ctx_dim'], dim=options['dim'])
         ctx_dim = options['dim'] * 2
     # init_state, init_cell: [top right on page 4]
-    for lidx in xrange(1, options['n_layers_init']):
+    for lidx in range(1, options['n_layers_init']):
         params = get_layer('ff')[0](options, params, prefix='ff_init_%d'%lidx, nin=ctx_dim, nout=ctx_dim)
     params = get_layer('ff')[0](options, params, prefix='ff_state', nin=ctx_dim, nout=options['dim'])
     params = get_layer('ff')[0](options, params, prefix='ff_memory', nin=ctx_dim, nout=options['dim'])
@@ -540,7 +540,7 @@ def init_params(options):
                                        dimctx=ctx_dim)
     # potentially deep decoder (warning: should work but somewhat untested)
     if options['n_layers_lstm'] > 1:
-        for lidx in xrange(1, options['n_layers_lstm']):
+        for lidx in range(1, options['n_layers_lstm']):
             params = get_layer('ff')[0](options, params, prefix='ff_state_%d'%lidx, nin=options['ctx_dim'], nout=options['dim'])
             params = get_layer('ff')[0](options, params, prefix='ff_memory_%d'%lidx, nin=options['ctx_dim'], nout=options['dim'])
             params = get_layer('lstm_cond')[0](options, params, prefix='decoder_%d'%lidx,
@@ -551,7 +551,7 @@ def init_params(options):
     if options['ctx2out']:
         params = get_layer('ff')[0](options, params, prefix='ff_logit_ctx', nin=ctx_dim, nout=options['dim_word'])
     if options['n_layers_out'] > 1:
-        for lidx in xrange(1, options['n_layers_out']):
+        for lidx in range(1, options['n_layers_out']):
             params = get_layer('ff')[0](options, params, prefix='ff_logit_h%d'%lidx, nin=options['dim_word'], nout=options['dim_word'])
     params = get_layer('ff')[0](options, params, prefix='ff_logit', nin=options['dim_word'], nout=options['n_words'])
 
@@ -624,7 +624,7 @@ def build_model(tparams, options, sampling=True):
 
     # initial state/cell [top right on page 4]
     ctx_mean = ctx0.mean(1)
-    for lidx in xrange(1, options['n_layers_init']):
+    for lidx in range(1, options['n_layers_init']):
         ctx_mean = get_layer('ff')[1](tparams, ctx_mean, options,
                                       prefix='ff_init_%d'%lidx, activ='rectifier')
         if options['use_dropout']:
@@ -648,7 +648,7 @@ def build_model(tparams, options, sampling=True):
     proj_h = proj[0]
     # optional deep attention
     if options['n_layers_lstm'] > 1:
-        for lidx in xrange(1, options['n_layers_lstm']):
+        for lidx in range(1, options['n_layers_lstm']):
             init_state = get_layer('ff')[1](tparams, ctx_mean, options, prefix='ff_state_%d'%lidx, activ='tanh')
             init_memory = get_layer('ff')[1](tparams, ctx_mean, options, prefix='ff_memory_%d'%lidx, activ='tanh')
             proj, updates = get_layer('lstm_cond')[1](tparams, proj_h, options,
@@ -685,7 +685,7 @@ def build_model(tparams, options, sampling=True):
     if options['use_dropout']:
         logit = dropout_layer(logit, use_noise, trng)
     if options['n_layers_out'] > 1:
-        for lidx in xrange(1, options['n_layers_out']):
+        for lidx in range(1, options['n_layers_out']):
             logit = get_layer('ff')[1](tparams, logit, options, prefix='ff_logit_h%d'%lidx, activ='rectifier')
             if options['use_dropout']:
                 logit = dropout_layer(logit, use_noise, trng)
@@ -740,7 +740,7 @@ def build_sampler(tparams, options, use_noise, trng, sampling=True):
 
     # initial state/cell
     ctx_mean = ctx.mean(0)
-    for lidx in xrange(1, options['n_layers_init']):
+    for lidx in range(1, options['n_layers_init']):
         ctx_mean = get_layer('ff')[1](tparams, ctx_mean, options,
                                       prefix='ff_init_%d'%lidx, activ='rectifier')
         if options['use_dropout']:
@@ -748,13 +748,13 @@ def build_sampler(tparams, options, use_noise, trng, sampling=True):
     init_state = [get_layer('ff')[1](tparams, ctx_mean, options, prefix='ff_state', activ='tanh')]
     init_memory = [get_layer('ff')[1](tparams, ctx_mean, options, prefix='ff_memory', activ='tanh')]
     if options['n_layers_lstm'] > 1:
-        for lidx in xrange(1, options['n_layers_lstm']):
+        for lidx in range(1, options['n_layers_lstm']):
             init_state.append(get_layer('ff')[1](tparams, ctx_mean, options, prefix='ff_state_%d'%lidx, activ='tanh'))
             init_memory.append(get_layer('ff')[1](tparams, ctx_mean, options, prefix='ff_memory_%d'%lidx, activ='tanh'))
 
-    print 'Building f_init...',
+    print(('Building f_init...',))
     f_init = theano.function([ctx], [ctx]+init_state+init_memory, name='f_init', profile=False)
-    print 'Done'
+    print ('Done')
 
     # build f_next
     ctx = tensor.matrix('ctx_sampler', dtype='float32')
@@ -762,7 +762,7 @@ def build_sampler(tparams, options, use_noise, trng, sampling=True):
     init_state = [tensor.matrix('init_state', dtype='float32')]
     init_memory = [tensor.matrix('init_memory', dtype='float32')]
     if options['n_layers_lstm'] > 1:
-        for lidx in xrange(1, options['n_layers_lstm']):
+        for lidx in range(1, options['n_layers_lstm']):
             init_state.append(tensor.matrix('init_state', dtype='float32'))
             init_memory.append(tensor.matrix('init_memory', dtype='float32'))
 
@@ -783,7 +783,7 @@ def build_sampler(tparams, options, use_noise, trng, sampling=True):
     next_state, next_memory, ctxs = [proj[0]], [proj[1]], [proj[4]]
     proj_h = proj[0]
     if options['n_layers_lstm'] > 1:
-        for lidx in xrange(1, options['n_layers_lstm']):
+        for lidx in range(1, options['n_layers_lstm']):
             proj = get_layer('lstm_cond')[1](tparams, proj_h, options,
                                              prefix='decoder_%d'%lidx,
                                              context=ctx,
@@ -811,7 +811,7 @@ def build_sampler(tparams, options, use_noise, trng, sampling=True):
     if options['use_dropout']:
         logit = dropout_layer(logit, use_noise, trng)
     if options['n_layers_out'] > 1:
-        for lidx in xrange(1, options['n_layers_out']):
+        for lidx in range(1, options['n_layers_out']):
             logit = get_layer('ff')[1](tparams, logit, options, prefix='ff_logit_h%d'%lidx, activ='rectifier')
             if options['use_dropout']:
                 logit = dropout_layer(logit, use_noise, trng)
@@ -887,17 +887,17 @@ def gen_sample(tparams, f_init, f_next, ctx0, options,
     next_state = []
     next_memory = []
     # the states are returned as a: (dim,) and this is just a reshape to (1, dim)
-    for lidx in xrange(options['n_layers_lstm']):
+    for lidx in range(options['n_layers_lstm']):
         next_state.append(rval[1+lidx])
         next_state[-1] = next_state[-1].reshape([1, next_state[-1].shape[0]])
-    for lidx in xrange(options['n_layers_lstm']):
+    for lidx in range(options['n_layers_lstm']):
         next_memory.append(rval[1+options['n_layers_lstm']+lidx])
         next_memory[-1] = next_memory[-1].reshape([1, next_memory[-1].shape[0]])
     # reminder: if next_w = -1, the switch statement
     # in build_sampler is triggered -> (empty word embeddings)  
     next_w = -1 * numpy.ones((1,)).astype('int64')
 
-    for ii in xrange(maxlen):
+    for ii in range(maxlen):
         # our "next" state/memory in our previous step is now our "initial" state and memory
         rval = f_next(*([next_w, ctx0]+next_state+next_memory))
         next_p = rval[0]
@@ -906,7 +906,7 @@ def gen_sample(tparams, f_init, f_next, ctx0, options,
         # extract all the states and memories
         next_state = []
         next_memory = []
-        for lidx in xrange(options['n_layers_lstm']):
+        for lidx in range(options['n_layers_lstm']):
             next_state.append(rval[2+lidx])
             next_memory.append(rval[2+options['n_layers_lstm']+lidx])
 
@@ -922,7 +922,7 @@ def gen_sample(tparams, f_init, f_next, ctx0, options,
 
             voc_size = next_p.shape[1]
             # indexing into the correct selected captions
-            trans_indices = ranks_flat / voc_size
+            trans_indices = ranks_flat // voc_size
             word_indices = ranks_flat % voc_size
             costs = cand_flat[ranks_flat] # extract costs from top hypothesis
 
@@ -930,19 +930,19 @@ def gen_sample(tparams, f_init, f_next, ctx0, options,
             new_hyp_samples = []
             new_hyp_scores = numpy.zeros(k-dead_k).astype('float32')
             new_hyp_states = []
-            for lidx in xrange(options['n_layers_lstm']):
+            for lidx in range(options['n_layers_lstm']):
                 new_hyp_states.append([])
             new_hyp_memories = []
-            for lidx in xrange(options['n_layers_lstm']):
+            for lidx in range(options['n_layers_lstm']):
                 new_hyp_memories.append([])
 
             # get the corresponding hypothesis and append the predicted word
             for idx, [ti, wi] in enumerate(zip(trans_indices, word_indices)):
                 new_hyp_samples.append(hyp_samples[ti]+[wi])
                 new_hyp_scores[idx] = copy.copy(costs[idx]) # copy in the cost of that hypothesis 
-                for lidx in xrange(options['n_layers_lstm']):
+                for lidx in range(options['n_layers_lstm']):
                     new_hyp_states[lidx].append(copy.copy(next_state[lidx][ti]))
-                for lidx in xrange(options['n_layers_lstm']):
+                for lidx in range(options['n_layers_lstm']):
                     new_hyp_memories[lidx].append(copy.copy(next_memory[lidx][ti]))
 
             # check the finished samples for <eos> character
@@ -950,13 +950,13 @@ def gen_sample(tparams, f_init, f_next, ctx0, options,
             hyp_samples = []
             hyp_scores = []
             hyp_states = []
-            for lidx in xrange(options['n_layers_lstm']):
+            for lidx in range(options['n_layers_lstm']):
                 hyp_states.append([])
             hyp_memories = []
-            for lidx in xrange(options['n_layers_lstm']):
+            for lidx in range(options['n_layers_lstm']):
                 hyp_memories.append([])
 
-            for idx in xrange(len(new_hyp_samples)):
+            for idx in range(len(new_hyp_samples)):
                 if new_hyp_samples[idx][-1] == 0:
                     sample.append(new_hyp_samples[idx])
                     sample_score.append(new_hyp_scores[idx])
@@ -965,9 +965,9 @@ def gen_sample(tparams, f_init, f_next, ctx0, options,
                     new_live_k += 1 # collect collect correct states/memories
                     hyp_samples.append(new_hyp_samples[idx])
                     hyp_scores.append(new_hyp_scores[idx])
-                    for lidx in xrange(options['n_layers_lstm']):
+                    for lidx in range(options['n_layers_lstm']):
                         hyp_states[lidx].append(new_hyp_states[lidx][idx])
-                    for lidx in xrange(options['n_layers_lstm']):
+                    for lidx in range(options['n_layers_lstm']):
                         hyp_memories[lidx].append(new_hyp_memories[lidx][idx])
             hyp_scores = numpy.array(hyp_scores)
             live_k = new_live_k
@@ -979,16 +979,16 @@ def gen_sample(tparams, f_init, f_next, ctx0, options,
 
             next_w = numpy.array([w[-1] for w in hyp_samples])
             next_state = []
-            for lidx in xrange(options['n_layers_lstm']):
+            for lidx in range(options['n_layers_lstm']):
                 next_state.append(numpy.array(hyp_states[lidx]))
             next_memory = []
-            for lidx in xrange(options['n_layers_lstm']):
+            for lidx in range(options['n_layers_lstm']):
                 next_memory.append(numpy.array(hyp_memories[lidx]))
 
     if not stochastic:
         # dump every remaining one
         if live_k > 0:
-            for idx in xrange(live_k):
+            for idx in range(live_k):
                 sample.append(hyp_samples[idx])
                 sample_score.append(hyp_scores[idx])
 
@@ -1034,7 +1034,7 @@ def pred_probs(f_log_probs, options, worddict, prepare_data, data, iterator, ver
 
         n_done += len(valid_index)
         if verbose:
-            print '%d/%d samples computed'%(n_done,n_samples)
+            print(('%d/%d samples computed'%(n_done,n_samples)))
 
     return probs
 
@@ -1107,30 +1107,30 @@ def train(dim_word=100,  # word vector dimensionality
 
     # reload options
     if reload_ and os.path.exists(saveto):
-        print "Reloading options"
+        print ("Reloading options")
         with open('%s.pkl'%saveto, 'rb') as f:
             model_options = pkl.load(f)
 
-    print "Using the following parameters:"
-    print  model_options
+    print("Using the following parameters:")
+    print(model_options)
 
-    print 'Loading data'
+    print('Loading data')
     load_data, prepare_data = get_dataset(dataset)
     train, valid, test, worddict = load_data()
 
     # index 0 and 1 always code for the end of sentence and unknown token
     word_idict = dict()
-    for kk, vv in worddict.iteritems():
+    for kk, vv in worddict.items():
         word_idict[vv] = kk
     word_idict[0] = '<eos>'
     word_idict[1] = 'UNK'
 
     # Initialize (or reload) the parameters using 'model_options'
     # then build the Theano graph
-    print 'Building model'
+    print('Building model')
     params = init_params(model_options)
     if reload_ and os.path.exists(saveto):
-        print "Reloading model"
+        print("Reloading model")
         params = load_params(saveto, params)
 
     # numpy arrays -> theano shared variables
@@ -1152,7 +1152,7 @@ def train(dim_word=100,  # word vector dimensionality
     # To sample, we use beam search: 1) f_init is a function that initializes
     # the LSTM at time 0 [see top right of page 4], 2) f_next returns the distribution over
     # words and also the new "initial state/memory" see equation
-    print 'Buliding sampler'
+    print('Buliding sampler')
     f_init, f_next = build_sampler(tparams, model_options, use_noise, trng)
 
     # we want the cost without any the regularizers
@@ -1166,7 +1166,7 @@ def train(dim_word=100,  # word vector dimensionality
     if decay_c > 0.:
         decay_c = theano.shared(numpy.float32(decay_c), name='decay_c')
         weight_decay = 0.
-        for kk, vv in tparams.iteritems():
+        for kk, vv in tparams.items():
             weight_decay += (vv ** 2).sum()
         weight_decay *= decay_c
         cost += weight_decay
@@ -1212,7 +1212,7 @@ def train(dim_word=100,  # word vector dimensionality
     lr = tensor.scalar(name='lr')
     f_grad_shared, f_update = eval(optimizer)(lr, tparams, grads, inps, cost, hard_attn_updates)
 
-    print 'Optimization'
+    print('Optimization')
 
     # [See note in section 4.3 of paper]
     train_iter = HomogeneousData(train, batch_size=batch_size, maxlen=maxlen)
@@ -1239,10 +1239,10 @@ def train(dim_word=100,  # word vector dimensionality
 
     uidx = 0
     estop = False
-    for eidx in xrange(max_epochs):
+    for eidx in range(max_epochs):
         n_samples = 0
 
-        print 'Epoch ', eidx
+        print('Epoch ', eidx)
 
         for caps in train_iter:
             n_samples += len(caps)
@@ -1261,7 +1261,7 @@ def train(dim_word=100,  # word vector dimensionality
             pd_duration = time.time() - pd_start
 
             if x is None:
-                print 'Minibatch with zero sample under length ', maxlen
+                print('Minibatch with zero sample under length ', maxlen)
                 continue
 
             # get the cost for the minibatch, and update the weights
@@ -1272,15 +1272,15 @@ def train(dim_word=100,  # word vector dimensionality
 
             # Numerical stability check
             if numpy.isnan(cost) or numpy.isinf(cost):
-                print 'NaN detected'
+                print('NaN detected')
                 return 1., 1., 1.
 
             if numpy.mod(uidx, dispFreq) == 0:
-                print 'Epoch ', eidx, 'Update ', uidx, 'Cost ', cost, 'PD ', pd_duration, 'UD ', ud_duration
+                print('Epoch ', eidx, 'Update ', uidx, 'Cost ', cost, 'PD ', pd_duration, 'UD ', ud_duration)
 
             # Checkpoint
             if numpy.mod(uidx, saveFreq) == 0:
-                print 'Saving...',
+                print('Saving...', end=' ')
 
                 if best_p is not None:
                     params = copy.copy(best_p)
@@ -1288,7 +1288,7 @@ def train(dim_word=100,  # word vector dimensionality
                     params = unzip(tparams)
                 numpy.savez(saveto, history_errs=history_errs, **params)
                 pkl.dump(model_options, open('%s.pkl'%saveto, 'wb'))
-                print 'Done'
+                print('Done')
 
             # Print a generated sample as a sanity check
             if numpy.mod(uidx, sampleFreq) == 0:
@@ -1298,29 +1298,29 @@ def train(dim_word=100,  # word vector dimensionality
                 mask_s = mask
                 ctx_s = ctx
                 # generate and decode the a subset of the current training batch
-                for jj in xrange(numpy.minimum(10, len(caps))):
+                for jj in range(numpy.minimum(10, len(caps))):
                     sample, score = gen_sample(tparams, f_init, f_next, ctx_s[jj], model_options,
                                                trng=trng, k=5, maxlen=30, stochastic=False)
                     # Decode the sample from encoding back to words
-                    print 'Truth ',jj,': ',
+                    print('Truth ',jj,': ', end=' ')
                     for vv in x_s[:,jj]:
                         if vv == 0:
                             break
                         if vv in word_idict:
-                            print word_idict[vv],
+                            print(word_idict[vv], end=' ')
                         else:
-                            print 'UNK',
-                    print
+                            print('UNK', end=' ')
+                    print()
                     for kk, ss in enumerate([sample[0]]):
-                        print 'Sample (', kk,') ', jj, ': ',
+                        print('Sample (', kk,') ', jj, ': ', end=' ')
                         for vv in ss:
                             if vv == 0:
                                 break
                             if vv in word_idict:
-                                print word_idict[vv],
+                                print(word_idict[vv], end=' ')
                             else:
-                                print 'UNK',
-                    print
+                                print('UNK', end=' ')
+                    print()
 
             # Log validation loss + checkpoint the model with the best validation log likelihood
             if numpy.mod(uidx, validFreq) == 0:
@@ -1339,7 +1339,7 @@ def train(dim_word=100,  # word vector dimensionality
                 # the model with the best validation long likelihood is saved seperately with a different name
                 if uidx == 0 or valid_err <= numpy.array(history_errs)[:,0].min():
                     best_p = unzip(tparams)
-                    print 'Saving model with best validation ll'
+                    print('Saving model with best validation ll')
                     params = copy.copy(best_p)
                     params = unzip(tparams)
                     numpy.savez(saveto+'_bestll', history_errs=history_errs, **params)
@@ -1349,13 +1349,13 @@ def train(dim_word=100,  # word vector dimensionality
                 if eidx > patience and len(history_errs) > patience and valid_err >= numpy.array(history_errs)[:-patience,0].min():
                     bad_counter += 1
                     if bad_counter > patience:
-                        print 'Early Stop!'
+                        print('Early Stop!')
                         estop = True
                         break
 
-                print 'Train ', train_err, 'Valid ', valid_err, 'Test ', test_err
+                print('Train ', train_err, 'Valid ', valid_err, 'Test ', test_err)
 
-        print 'Seen %d samples' % n_samples
+        print('Seen %d samples' % n_samples)
 
         if estop:
             break
@@ -1376,7 +1376,7 @@ def train(dim_word=100,  # word vector dimensionality
     if test:
         test_err = -pred_probs(f_log_probs, model_options, worddict, prepare_data, test, kf_test)
 
-    print 'Train ', train_err, 'Valid ', valid_err, 'Test ', test_err
+    print('Train ', train_err, 'Valid ', valid_err, 'Test ', test_err)
 
     params = copy.copy(best_p)
     numpy.savez(saveto, zipped_params=best_p, train_err=train_err,

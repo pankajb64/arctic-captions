@@ -46,7 +46,7 @@ def main(params):
                            use_dropout=params["use-dropout"],
                            use_dropout_lstm=params["use-dropout-lstm"],
                            save_per_epoch=params["save-per-epoch"])
-    print "Final cost: {:.2f}".format(validerr.mean())
+    print("Final cost: {:.2f}".format(validerr.mean()))
 
 
 if __name__ == "__main__":
